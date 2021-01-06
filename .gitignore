@@ -338,3 +338,6 @@ ASALocalRun/
 
 # BeatPulse healthcheck temp database
 healthchecksdb
+/build/lib/wp_queueing
+/dist
+/wp_util.egg-info
