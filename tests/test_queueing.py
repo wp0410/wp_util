@@ -1,0 +1,54 @@
+"""
+    Copyright 2021 Walter Pachlinger (walter.pachlinger@gmail.com)
+
+    Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the European
+    Commission - subsequent versions of the EUPL (the LICENSE). You may not use this work except
+    in compliance with the LICENSE. You may obtain a copy of the LICENSE at:
+
+        https://joinup.ec.europa.eu/software/page/eupl
+
+    Unless required by applicable law or agreed to in writing, software distributed under the
+    LICENSE is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+    either express or implied. See the LICENSE for the specific language governing permissions
+    and limitations under the LICENSE.
+"""
+import unittest
+import uuid
+import wp_queueing as wpq
+
+class TMessage1(wpq.IConvertToDict):
+    def __init__(self):
+        super().__init__()
+
+    def to_dict(self) -> dict:
+        temp_dict = super().to_dict()
+        temp_dict['class'] = 'TMessage1'
+
+class TMessage2:
+    def __init__(self):
+        self.t = 1
+
+class Test1QueueMessage(unittest.TestCase):
+    def __init_config(self):
+        self.__config = {
+            "host": "localhost"
+        }
+
+    def setUp(self):
+        super().setUp()
+
+    def test_01(self):
+        print("")
+        msg = wpq.QueueMessage()
+        self.assertTrue(msg is not None)
+        print(str(msg))
+        self.assertTrue(type(msg.msg_id) is str and len(msg.msg_id) == len(str(uuid.uuid4())))
+        self.assertTrue(msg.msg_topic is None)
+        self.assertTrue(type(msg.msg_payload) is dict and len(msg.msg_payload) == 0)
+        with self.assertRaises(wpq.QueueingException):
+            msg.msg_payload = TMessage2()
+
+
+
+if __name__ == '__main__':
+    unittest.main(verbosity=5)

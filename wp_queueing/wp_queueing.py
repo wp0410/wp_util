@@ -93,16 +93,38 @@ class QueueMessage:
         mqtt_message : set, dict
             Setter that converts a MQTT message retrieved from a message queue into a message object.
     Methods:
+        QueueMessage : None
+            Constructor.
+        __str__ : str
+            Converts the object into a string.
         json_serialize_payload : str
             Converts the message objects into a JSON string.
         json_deserialize_payload : None
             Converts a JSON string into a message object.
     """
     def __init__(self, msg_topic = None):
+        """ Constructor.
+
+        Parameters:
+            msg_topic : str
+                MQTT topic for publishing the message.
+        """
         self.__msg_id = str(uuid.uuid4())
         self.__msg_dt = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
         self.__msg_topic = msg_topic
         self.__payload = dict()
+
+    def __str__(self) -> str:
+        """ Converts the object into a string.
+
+        Returns:
+            str : textual representation of the object.
+        """
+        temp_dict = {
+            'topic': self.__msg_topic,
+            'payload': self.json_serialize_payload()
+        }
+        return str(temp_dict)
 
     @property
     def msg_id(self) -> str:
@@ -203,7 +225,7 @@ class QueueingConfig:
         __getitem__
             Accessor for the dictionary elements.
     """
-    def __init__(self, config_dict):
+    def __init__(self, config_dict: dict):
         """ Constructor.
 
         Parameters:

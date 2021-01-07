@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>6d01e086-6a0b-4330-bbf7-eff6c3aaa4f4</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>tests.py</StartupFile>
+    <StartupFile>test_queueing.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -22,7 +22,14 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="tests.py" />
+    <Compile Include="test_queueing.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\wp_queueing\wp_queueing.pyproj">
+      <Name>wp_queueing</Name>
+      <Project>{8bfb1a48-1120-409f-b748-2a895a779100}</Project>
+      <Private>True</Private>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
