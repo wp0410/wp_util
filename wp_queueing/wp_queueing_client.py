@@ -96,22 +96,6 @@ def mqtt_on_connect(client, userdata, flags, rc):
 
 
 
-def mqtt_on_publish(client, userdata, mid):
-    """ Callback to be invoked when an attempt was made to publish a message to the MQTT broker.
-
-    Parameters:
-        client : mqtt.Client
-            Client owning the MQTT broker connection.
-        userdata : MQTTProducer
-            MQTTProducer instance owning the MQTT client.
-        mid : int
-            Message identifier of the published message.
-    """
-    # pylint: disable=unused-argument
-    userdata._messages_published += 1
-
-
-
 class MQTTClient:
     """ Base class for MQTT clients
 
@@ -143,26 +127,45 @@ class MQTTClient:
                 Logger to be used for logging.
         """
         mth_name = "{}.{}()".format(self.__class__.__name__, inspect.currentframe().f_code.co_name)
-        self._is_connected = False
-        self._logger = logger
-        self._config = QueueingConfig(config)
-        self._mqtt_client = mqtt.Client(userdata = self)
-        self._logger.debug("%s: Created MQTT Client; client_id=%s", mth_name, self._mqtt_client._client_id)
-        self._mqtt_client.on_connect = mqtt_on_connect
-        self._mqtt_client.enable_logger(self._logger)
-        self._mqtt_client.connect(self._config['host'], self._config['port'])
-        self._mqtt_client.loop(0.3, 10)
+        self.is_connected = False
+        self.logger = logger
+        self.config = QueueingConfig(config)
+        self.mqtt_client = mqtt.Client(userdata = self)
+        self.logger.debug("{}: Created MQTT Client; client_id={}".format(mth_name, self.mqtt_client._client_id))
+        self.mqtt_client.on_connect = mqtt_on_connect
+        self.mqtt_client.enable_logger(self.logger)
+        self.logger.debug('{}: Connecting to broker "{}:{}"'.format(mth_name, self.config['host'], self.config['port']))
+        self.mqtt_client.connect(self.config['host'], self.config['port'])
+        self.mqtt_client.loop(0.3, 10)
 
     def __del__(self):
         """ Destructor. """
-        if self._is_connected:
-            self._mqtt_client.disconnect()
-        self._mqtt_client = None
-        self._config = None
+        if self.is_connected:
+            self.mqtt_client.disconnect()
+        self.mqtt_client = None
+        self.config = None
 
     def connect_ack(self) -> None:
         """ Acknowledgement of a successful attempt to connect to a MQTT broker. """
-        self._is_connected = True
+        mth_name = "{}.{}()".format(self.__class__.__name__, inspect.currentframe().f_code.co_name)
+        self.is_connected = True
+        self.logger.debug('{}: Connection OK'.format(mth_name))
+
+
+
+def mqtt_on_publish(client, userdata, mid):
+    """ Callback to be invoked when an attempt was made to publish a message to the MQTT broker.
+
+    Parameters:
+        client : mqtt.Client
+            Client owning the MQTT broker connection.
+        userdata : MQTTProducer
+            MQTTProducer instance owning the MQTT client.
+        mid : int
+            Message identifier of the published message.
+    """
+    # pylint: disable=unused-argument
+    userdata.publish_ack(1)
 
 
 
@@ -176,12 +179,14 @@ class MQTTProducer(MQTTClient):
     Methods:
         MQTTProducer
             Constructor.
-        _publish
+        _publish : int
             Sends an message to the MQTT broker.
-        publish_single
+        publish_single : int
             Sends a single message to the MQTT broker.
-        publish_many
+        publish_many : int
             Sends a list of messages to the MQTT broker.
+        publish_ack : None
+            Receives the acknowledgement for a published message.
     """
     def __init__(self, config, logger):
         """ Constructor.
@@ -195,8 +200,8 @@ class MQTTProducer(MQTTClient):
         super().__init__(config, logger)
         self._messages_published = 0
         self._last_rc = None
-        self._mqtt_client.user_data_set(self)
-        self._mqtt_client.on_publish = mqtt_on_publish
+        self.mqtt_client.user_data_set(self)
+        self.mqtt_client.on_publish = mqtt_on_publish
 
     def _publish(self, message) -> int:
         """ Sends an message to the MQTT broker.
@@ -208,13 +213,14 @@ class MQTTProducer(MQTTClient):
         Returns:
             int : Number of messages successfully sent (0 or 1).
         """
-        self._logger.debug('MQTTProducer.__publish(message_type="{}")'.format(type(message)))
+        mth_name = "{}.{}()".format(self.__class__.__name__, inspect.currentframe().f_code.co_name)
+        self.logger.debug('{}: message_type="{}")'.format(mth_name, type(message)))
         if not issubclass(type(message), wp_queueing_message.QueueMessage):
-            self._logger.error('MQTTProducer.__publish: InvalidMessageFormat "{}"'.format(type(message)))
+            self.logger.error('{}: InvalidMessageFormat "{}"'.format(mth_name, type(message)))
             raise wp_queueing_base.QueueingException(
                 'InvalidMessageFormat', 'Invalid message type for sending: "{}"'.format(type(message)))
-        self._last_rc = self._mqtt_client.publish(message.msg_topic, message.mqtt_message, self._config['qos'])
-        self._logger.debug('MQTTProducer.__publish: returned {}'.format(str(self._last_rc)))
+        self._last_rc = self.mqtt_client.publish(message.msg_topic, message.mqtt_message, self.config['qos'])
+        self.logger.debug('{}: publish request returned {}'.format(mth_name, str(self._last_rc)))
         res = self._last_rc[0]
         if res == mqtt.MQTT_ERR_SUCCESS:
             return 1
@@ -231,7 +237,7 @@ class MQTTProducer(MQTTClient):
             int : Number of messages successfully sent (0 or 1).
         """
         num_ok = self._publish(message)
-        self._mqtt_client.loop(timeout = 0.2)
+        self.mqtt_client.loop(timeout = 0.2)
         return num_ok
 
 
@@ -248,8 +254,21 @@ class MQTTProducer(MQTTClient):
         num_ok = 0
         for message in message_list:
             num_ok += self._publish(message)
-        self._mqtt_client.loop(timeout = 0.2, max_packets = len(message_list) + 1)
+        self.mqtt_client.loop(timeout = 0.2, max_packets = len(message_list) + 1)
         return num_ok
+
+    def publish_ack(self, num_published) -> None:
+        """ Receives the acknowledgement for a published message.
+
+        Parameters:
+            num_published : int
+                Number of acknowledged messages.
+        """
+        mth_name = "{}.{}()".format(self.__class__.__name__, inspect.currentframe().f_code.co_name)
+        self._messages_published += num_published
+        self.logger.debug('{}: publish request acknowledged'.format(mth_name))
+        self.logger.debug('{}: Number of published messages: {}'.format(mth_name, self._messages_published))
+
 
 
 def mqtt_on_subscribe(client, userdata, mid, granted_qos):
@@ -321,14 +340,14 @@ class MQTTConsumer(MQTTClient):
         self._subscribed_topics = topics
         self._owner = owner
         self._is_subscribed = False
-        self._mqtt_client.user_data_set(self)
-        self._mqtt_client.on_message = mqtt_on_message
-        self._subscribe_res = self._mqtt_client.subscribe(topics)
+        self.mqtt_client.user_data_set(self)
+        self.mqtt_client.on_message = mqtt_on_message
+        self._subscribe_res = self.mqtt_client.subscribe(topics)
 
     def __del__(self):
         """ Destructor. """
         if self._is_subscribed:
-            self._mqtt_client.unsubscribe(self._subscribed_topics)
+            self.mqtt_client.unsubscribe(self._subscribed_topics)
         super().__del__()
 
     def subscribe_ack(self, mid, granted_qos) -> None:
@@ -345,7 +364,7 @@ class MQTTConsumer(MQTTClient):
 
     def receive(self) -> None:
         """ Poll the broker for messages to be retrieved. """
-        self._mqtt_client.loop(0.2, 10)
+        self.mqtt_client.loop(0.2, 10)
 
     def process_message(self, topic: str, message: str) -> None:
         """ Process a MQTT message received from the MQTT broker.
@@ -356,6 +375,10 @@ class MQTTConsumer(MQTTClient):
             message : str
                 String containing the message payload.
         """
+        mth_name = "{}.{}()".format(self.__class__.__name__, inspect.currentframe().f_code.co_name)
+        self.logger.debug('{}: received message:'.format(mth_name))
+        self.logger.debug('       topic   = "{}"'.format(topic))
+        self.logger.debug('       payload = "{}"'.format(message))
         msg = wp_queueing_message.QueueMessage()
         msg.mqtt_message = {'topic': topic, 'payload': message, 'qos': 0}
         self._owner.message(msg)
