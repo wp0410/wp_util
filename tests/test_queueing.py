@@ -14,17 +14,19 @@
 """
 import unittest
 import uuid
+from datetime import datetime
 import wp_queueing as wpq
 
-class TMessage1(wpq.IConvertToDict):
+class TMessageOK(wpq.IConvertToDict):
     def __init__(self):
         super().__init__()
 
     def to_dict(self) -> dict:
         temp_dict = super().to_dict()
         temp_dict['class'] = 'TMessage1'
+        return temp_dict
 
-class TMessage2:
+class TMessageFail:
     def __init__(self):
         self.t = 1
 
@@ -39,16 +41,37 @@ class Test1QueueMessage(unittest.TestCase):
 
     def test_01(self):
         print("")
-        msg = wpq.QueueMessage()
-        self.assertTrue(msg is not None)
-        print(str(msg))
-        self.assertTrue(type(msg.msg_id) is str and len(msg.msg_id) == len(str(uuid.uuid4())))
-        self.assertTrue(msg.msg_topic is None)
-        self.assertTrue(type(msg.msg_payload) is dict and len(msg.msg_payload) == 0)
+        msg_1 = wpq.QueueMessage(msg_topic = "a_topic")
+        self.assertIsNotNone(msg_1)
+        print(str(msg_1))
+        self.assertTrue(type(msg_1.msg_id) is str and len(msg_1.msg_id) == len(str(uuid.uuid4())))
+        self.assertIsNotNone(msg_1.msg_topic)
+        self.assertEqual(msg_1.msg_topic, "a_topic")
+        self.assertTrue(type(msg_1.msg_timestamp) is str)
+        try:
+            temp_dt = datetime.strptime(msg_1.msg_timestamp, "%Y-%m-%d %H:%M:%S.%f")
+        except:
+            self.assertTrue(False, "Invalid datetime format")
+        self.assertTrue(type(msg_1.msg_payload) is dict and len(msg_1.msg_payload) == 0)
         with self.assertRaises(wpq.QueueingException):
-            msg.msg_payload = TMessage2()
-
-
+            msg_1.msg_payload = TMessageFail()
+        try:
+            msg_1.msg_payload = TMessageOK()
+        except wpq.QueueingException:
+            self.assertTrue(False, 'Invalid Payload Type')
+        self.assertIsNotNone(msg_1.msg_payload)
+        self.assertTrue(type(msg_1.msg_payload) is dict and 'class' in msg_1.msg_payload)
+        msg_2 = wpq.QueueMessage()
+        self.assertIsNotNone(msg_2)
+        temp_mqtt = msg_1.mqtt_message
+        self.assertEqual(temp_mqtt['topic'], msg_1.msg_topic)
+        msg_2.mqtt_message = temp_mqtt
+        self.assertEqual(msg_1.msg_id, msg_2.msg_id)
+        self.assertEqual(msg_1.msg_timestamp, msg_2.msg_timestamp)
+        self.assertEqual(msg_1.msg_topic, msg_2.msg_topic)
+        self.assertIsNotNone(msg_2.msg_payload)
+        self.assertTrue(type(msg_2.msg_payload) is dict and 'class' in msg_2.msg_payload)
+        self.assertEqual(msg_1.msg_payload['class'], msg_2.msg_payload['class'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=5)

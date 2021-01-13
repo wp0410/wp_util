@@ -22,7 +22,13 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="wp_queueing.py">
+    <Compile Include="wp_queueing_base.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="wp_queueing_client.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="wp_queueing_message.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="__init__.py">
