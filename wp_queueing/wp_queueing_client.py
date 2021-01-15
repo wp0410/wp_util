@@ -13,6 +13,7 @@
     and limitations under the LICENSE.
 """
 import inspect
+import logging
 import paho.mqtt.client as mqtt
 import wp_queueing_base
 import wp_queueing_message
@@ -327,7 +328,7 @@ class MQTTConsumer(MQTTClient):
         process_message : None
             Process a MQTT message received from the MQTT broker.
     """
-    def __init__(self, config, logger, topics, owner):
+    def __init__(self, config: dict, logger: logging.Logger, topics: list = None, owner = None):
         """ Constructor.
 
         Parameters:
@@ -337,18 +338,67 @@ class MQTTConsumer(MQTTClient):
                 Logger to be used for logging.
         """
         super().__init__(config, logger)
-        self._subscribed_topics = topics
         self._owner = owner
         self._is_subscribed = False
         self.mqtt_client.user_data_set(self)
         self.mqtt_client.on_message = mqtt_on_message
-        self._subscribe_res = self.mqtt_client.subscribe(topics)
+        if topics is not None:
+            self._subscribed_topics = topics
+            self.mqtt_client.subscribe(topics)
+            self.receive()
+        else:
+            self._subscribed_topics = None
 
     def __del__(self):
         """ Destructor. """
         if self._is_subscribed:
             self.mqtt_client.unsubscribe(self._subscribed_topics)
         super().__del__()
+
+    @property
+    def owner(self) -> object:
+        """ Getter for the "owner" attribute.
+
+        Returns:
+            object : reference to the object owning the MQTTConsumer instance.
+        """
+        return self._owner
+
+    @owner.setter
+    def owner(self, value: object) -> None:
+        """ Setter for the "owner" attribute.
+
+        Parameters:
+            value : object
+                Reference to the object to own the MQTTConsumer instance.
+        """
+        self._owner = value
+
+    @property
+    def topics(self) -> list:
+        """ Getter for the "topics" attribute containing the list of topics the MQTTConsumer is subscribed to.
+
+        Returns:
+            list : list of subscribed topics or None.
+        """
+        return self._subscribed_topics
+
+    @topics.setter
+    def topics(self, topic_list: list) -> None:
+        """ Setter for the "topics" attribute. This setter must be used at most once, and only if the "topics"
+            parameter of the Constructor has been empty (None). Otherwise, a RuntimeError will be raised.
+
+        Parameters:
+            topic_list : list
+                List of topics to subscribe to.
+        """
+        if topic_list is None:
+            return
+        if self._is_subscribed:
+            raise RuntimeError('MQTTConsumer is already subscribed')
+        self._subscribed_topics = topic_list
+        self.mqtt_client.subscribe(topic_list)
+        self.receive()
 
     def subscribe_ack(self, mid, granted_qos) -> None:
         """ Acknowledge the successful subscription to a topic (or a list of topics).
