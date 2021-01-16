@@ -15,11 +15,12 @@
 import inspect
 import logging
 import paho.mqtt.client as mqtt
+import wp_configuration as wp_config
 import wp_queueing_base
 import wp_queueing_message
 
 
-class QueueingConfig:
+class QueueingConfig(wp_config.DictConfigWrapper):
     """ Class holding the configuration of the queueing system.
 
     Attributes:
@@ -31,8 +32,6 @@ class QueueingConfig:
     Methods:
         QueueConfig()
             Constructor
-        __getitem__
-            Accessor for the dictionary elements.
     """
     def __init__(self, config_dict: dict):
         """ Constructor.
@@ -41,36 +40,10 @@ class QueueingConfig:
             config_dict : dict
                 Dictionary containing the configuration as name-value pairs.
         """
-        if not config_dict is dict:
-            raise wp_queueing_base.QueueingException(
-                'InvalidConfiguration', 'Configuration must be a dictionary')
-        self._config_dict = dict(config_dict)
-        exception_detail = 'Missing configuration element: "host"'
-        self._is_valid = 'host' in self._config_dict
-        if 'port' not in self._config_dict:
-            self._config_dict['port'] = 1883
-        if 'qos' not in self._config_dict:
-            self._config_dict['qos'] = 0
-        if self._is_valid:
-            exception_detail = 'Invalid configuration element: "qos". Value is {}'.format(self._config_dict['qos'])
-            self._is_valid = self._config_dict['qos'] in [0, 1, 2]
-        if not self._is_valid:
-            raise wp_queueing_base.QueueingException('InvalidConfiguration', exception_detail)
-
-    def __getitem__(self, config_key):
-        """ Accessor for the dictionary elements.
-
-        Parameters:
-            config_key : str
-                Name of a configuration parameter.
-
-        Returns:
-            Any : Value of the configuration parameter.
-        """
-        if config_key in self._config_dict:
-            return self._config_dict[config_key]
-        raise wp_queueing_base.QueueingException(
-            'InvalidConfiguration', 'Undefined configuration element: "{}"'.format(config_key))
+        super().__init__(config_dict)
+        self.value_error(self.mandatory_str("host", [6]))
+        self.optional_int("port", 1883)
+        self.optional_int("qos", 0)
 
 
 
