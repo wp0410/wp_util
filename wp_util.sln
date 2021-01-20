@@ -16,6 +16,8 @@ Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "tests", "tests\tests.pyproj
 EndProject
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "wp_configuration", "wp_configuration\wp_configuration.pyproj", "{9CC23CDB-88C0-465E-9F78-11A70E2AFF31}"
 EndProject
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "wp_repository", "wp_repository\wp_repository.pyproj", "{46EB14BE-3093-4746-8C29-A929179664B5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -28,6 +30,8 @@ Global
 		{6D01E086-6A0B-4330-BBF7-EFF6C3AAA4F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9CC23CDB-88C0-465E-9F78-11A70E2AFF31}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{9CC23CDB-88C0-465E-9F78-11A70E2AFF31}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{46EB14BE-3093-4746-8C29-A929179664B5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{46EB14BE-3093-4746-8C29-A929179664B5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
