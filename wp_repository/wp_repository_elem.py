@@ -169,7 +169,7 @@ class AttributeMapping:
         return self._select_rank >= 0
 
     @staticmethod
-    def by_rank(mapping: AttributeMapping) -> int:
+    def by_rank(mapping: object) -> int:
         """ Returns the "select_rank" attribute of an "AttributeMapping" instance. Needed for sorting
             a list of "AttributeMapping" objects for correctly composing a SELECT statement.
 
@@ -312,7 +312,7 @@ class AttributeMap:
         """
         mappings = []
         for mapping in self._mappings:
-            if getattr(self, bool_attr_name):
+            if getattr(mapping, bool_attr_name):
                 mappings.append(mapping)
         return mappings
 
@@ -325,7 +325,7 @@ class RepositoryElement:
         table of the Repository.
 
     Methods:
-        RepositoryElement() : RepositoryElement
+        SQLiteRepositoryElement()
             Constructor
         load_row : RepositoryElement
             Converts an array of column values read from a SQLite cursor into a RepositoryElement
@@ -353,6 +353,9 @@ class RepositoryElement:
             statement.
     """
     _attribute_map = AttributeMap("", [])
+
+    def __init__(self):
+        """ Constructor. """
 
     def load_row(self, cursor_row) -> object:
         """ Converts an array of column values read from a SQLite cursor into a RepositoryElement
@@ -438,6 +441,7 @@ class RepositoryElement:
             else:
                 sel_stmt.append_text(', {}'.format(mapping.db_attr_name))
             att_no += 1
+        sel_stmt.append_text(' FROM {} '.format(self._attribute_map.table_name))
         return self._key_where_clause(sel_stmt)
 
     def _key_where_clause(self, sql_stmt: SQLStatement) -> SQLStatement:
@@ -471,7 +475,40 @@ class RepositoryElement:
                 An open cursor within an active SQLite database connection.
 
         Returns:
-            int : Number of inserted rows (1 ... OK, 0 ... row not inserted)
+            int : If the underlying table has an auto-increment key: new key value;
+                  Otherwise: number of inserted rows (1 ... OK, 0 ... row not inserted)
         """
         sql_insert_stmt = self.insert_statement()
         cursor.execute(sql_insert_stmt.stmt_text, sql_insert_stmt.stmt_params)
+        if self._attribute_map.has_auto_increment_key:
+            auto_key = cursor.lastrowid
+            setattr(self, self._attribute_map.autoincrement_attribute.class_attr_name, auto_key)
+            return auto_key
+        return 1
+
+    def update(self, cursor: sqlite3.Cursor) -> int:
+        """ Updates a RepositoryElement in the SQLite table by executing its SQL UPDATE statement.
+
+        Parameters:
+            cursor : sqlite3.Cursor
+
+        Returns : int
+            Number of updated rows.
+        """
+        sql_update_stmt = self.update_statement()
+        cursor.execute(sql_update_stmt.stmt_text, sql_update_stmt.stmt_params)
+        return cursor.rowcount
+
+    def delete(self, cursor: sqlite3.Cursor) -> int:
+        """ Deletes a RepositoryElement from the SQLite table by executing its SQL DELETE
+            statement.
+
+        Parameters:
+            cursor : sqlite3.Cursor
+
+        Returns : int
+            Number of deleted rows.
+        """
+        sql_delete_stmt = self.delete_statement()
+        cursor.execute(sql_delete_stmt.stmt_text, sql_delete_stmt.stmt_params)
+        return cursor.rowcount

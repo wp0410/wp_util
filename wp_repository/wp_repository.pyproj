@@ -22,6 +22,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="wp_repository_elem.py" />
+    <Compile Include="wp_repository_sl3.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="wp_sql_statement.py">
       <SubType>Code</SubType>
     </Compile>

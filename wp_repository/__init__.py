@@ -13,4 +13,5 @@
     and limitations under the LICENSE.
 """
 from wp_sql_statement import SQLStatement
-from wp_repository_elem import AttributeMapping, RepositoryElement
+from wp_repository_elem import AttributeMapping, AttributeMap, RepositoryElement
+from wp_repository_sl3 import SQLiteRepository
