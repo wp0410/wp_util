@@ -13,6 +13,8 @@
     and limitations under the LICENSE.
 """
 import sqlite3
+from datetime import datetime
+from typing import Any
 from wp_sql_statement import SQLStatement
 
 class AttributeMapping:
@@ -26,6 +28,8 @@ class AttributeMapping:
             statement.
         _cl_attr_name : str
             Name of the class attribute.
+        _cl_attr_type : type
+            Type of the class attribute.
         _db_attr_name : str
             Name of the attribute of the database table.
         _db_key : int
@@ -49,9 +53,9 @@ class AttributeMapping:
             Indicates whether or not the table attribute is an auto-increment key element of the underlying
             database table.
         include_in_insert : bool
-            Getter for the "_inc_insert" instance attribute.
+            Tests whether or not the attribute shall be included in an auto-generated INSERT statement.
         include_in_update : bool
-            Getter for the "_inc_update" instance attribute.
+            Tests whether or not the attribute shall be included in an auto-generated UPDATE statement.
         include_in_select : bool
             Indicates whether or not the database attribute shall appear on the select list of a
             SELECT statement.
@@ -63,7 +67,7 @@ class AttributeMapping:
             Returns the "select_rank" attribute of an "AttributeMapping" instance. Needed for sorting
             a list of "AttributeMapping" objects for correctly composing a SELECT statement.
     """
-    def __init__(self, select_rank: int, cls_attr_name: str, db_attr_name: str,
+    def __init__(self, select_rank: int, cls_attr_name: str, db_attr_name: str, cls_attr_type: type = str,
                  db_key: int = 0, include_in_insert: bool = True, include_in_update: bool = True):
         """ Constructor.
 
@@ -74,6 +78,8 @@ class AttributeMapping:
                 statement.
             cls_attr_name : str
                 Name of the class attribute.
+            cls_attr_type : type
+                Type of the class attribute.
             db_attr_name : str
                 Name of the attribute of the database table.
             db_key : int, optional
@@ -89,6 +95,7 @@ class AttributeMapping:
         # pylint: disable=too-many-arguments
         self._select_rank = select_rank
         self._cl_attr_name = cls_attr_name
+        self._cl_attr_type = cls_attr_type
         self._db_attr_name = db_attr_name
         self._db_key = db_key
         self._inc_insert = include_in_insert
@@ -111,6 +118,15 @@ class AttributeMapping:
             str : value of the "_cl_attr_name" instance attribute.
         """
         return self._cl_attr_name
+
+    @property
+    def class_attr_type(self) -> type:
+        """ Getter for the "_cl_attr_type" instance attribute.
+
+        Returns:
+            type : value of the "_cl_attr_type" instance attribute.
+        """
+        return self._cl_attr_type
 
     @property
     def db_attr_name(self) -> str:
@@ -142,21 +158,21 @@ class AttributeMapping:
 
     @property
     def include_in_insert(self) -> bool:
-        """ Getter for the "_inc_insert" instance attribute.
+        """ Tests whether or not the attribute shall be included in an auto-generated INSERT statement.
 
         Returns:
-            Value of the "_inc_insert" instance attribute.
+            bool : True if attribute shall be included in an insert statement; False otherwise.
         """
-        return self._inc_insert
+        return self._inc_insert and not self.is_autoincrement_key
 
     @property
     def include_in_update(self) -> bool:
-        """ Getter for the "_inc_update" instance attribute.
+        """ Tests whether or not the attribute shall be included in an auto-generated UPDATE statement.
 
         Returns:
-            Value of the "_inc_update" instance attribute.
+            bool : True if attribute shall be included in an update statement; False otherwise.
         """
-        return self._inc_update
+        return self._inc_update and not self.is_autoincrement_key and not self.is_db_key
 
     @property
     def include_in_select(self) -> bool:
@@ -320,9 +336,11 @@ class RepositoryElement:
     """ Blueprint for items to be stored in a SQLite Repository. Following the "Repository" design
         pattern, a "Repository" is a collection of items of the same type. In this implementation,
         the "Repository" will be mapped to a SQLite table. To make a Python class "storable" in a
-        Repository, it must be derived from this class. The methods that create SQL DML statements
-        must be overloaded to provide the specific statement to manipulate the underlying SQLite
-        table of the Repository.
+        Repository, it must be derived from this class. In simple situations (e.g. class instance
+        is being mapped 1:1 on a single row in a single table) it is sufficient to instantiate the
+        "_attribute_map" class instance with a meaningful "AttributeMap". I more sophisticated
+        cases the methods to create the SQL statements ("insert_statement", "update_statement", ...)
+        must be overloaded.
 
     Methods:
         SQLiteRepositoryElement()
@@ -351,6 +369,9 @@ class RepositoryElement:
         delete : int
             Deletes a RepositoryElement from the SQLite table by executing its SQL DELETE
             statement.
+        _type_conversion : Any, static
+            Converts the type of the element read from the database to the target type of the corresponding
+            class attribute.
     """
     _attribute_map = AttributeMap("", [])
 
@@ -369,7 +390,36 @@ class RepositoryElement:
             The result of mapping the list of values into a RepositoryElement
         """
         for mapping in self._attribute_map.mappings:
-            setattr(self, mapping.class_attr_name, cursor_row[mapping.select_rank])
+            class_attr_val = self._type_conversion(mapping.class_attr_type, cursor_row[mapping.select_rank])
+            setattr(self, mapping.class_attr_name, class_attr_val)
+
+    @staticmethod
+    def _type_conversion(cls_attr_type: type, db_attr_value: Any) -> Any:
+        """ Converts the type of the element read from the database to the target type of the corresponding
+            class attribute.
+
+        Parameters:
+            cls_attr_type : type
+                Type of the class attribute.
+            db_attr_value : Any
+                Value read from the database table attribute.
+
+        Returns:
+            Any : correctly converted value.
+        """
+        if isinstance(db_attr_value, cls_attr_type):
+            res = db_attr_value
+        elif isinstance(db_attr_value, str):
+            if cls_attr_type is datetime:
+                if db_attr_value.find(".") >= 0:
+                    res = datetime.strptime(db_attr_value, "%Y-%m-%d %H:%M:%S.%f")
+                else:
+                    res = datetime.strptime(db_attr_value, "%Y-%m-%d %H:%M:%S")
+            else:
+                res = cls_attr_type(db_attr_value)
+        else:
+            res = cls_attr_type(db_attr_value)
+        return res
 
     def insert_statement(self) -> SQLStatement:
         """ Creates the SQL DML statement to insert a RepositoryElement into the SQLite table,

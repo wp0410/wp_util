@@ -23,8 +23,8 @@ class SQLiteRepository:
     Attributes:
         _sql_connection : sqlite3.Connection
             Handle to a session in a SQLite database.
-        _contents_class_name : str
-            Name of the contents class
+        _contents_type : type
+            Type of the contents class
         _can_close : bool
             Indicates whether or not the DB session can be closed by the object instance itself.
 
@@ -46,11 +46,11 @@ class SQLiteRepository:
             Selects the single element identified by the primary key values of the given parameter element
             from the underlying table.
     """
-    def __init__(self, contents_type: str, sql_connection: sqlite3.Connection = None):
+    def __init__(self, contents_type: type, sql_connection: sqlite3.Connection = None):
         """ Constructor.
 
         Parameters:
-            contents_type: str
+            contents_type: type
                Class name of the contents type, to be used for converting the SQLite cursor row into an
                object.
             sql_connection: sqlite3.Connection, optional
@@ -58,7 +58,7 @@ class SQLiteRepository:
                 used for the SQL operations of the SQLiteRepository instance.
         """
         self._sql_connection = sql_connection
-        self._contents_class_name = contents_type
+        self._contents_type = contents_type
         self._can_close = sql_connection is None
 
     def __del__(self):
@@ -172,6 +172,6 @@ class SQLiteRepository:
             self._sql_connection.commit()
         if qry_result is None:
             return None
-        res = (globals()[self._contents_class_name])()
+        res = self._contents_type()
         res.load_row(qry_result)
         return res
