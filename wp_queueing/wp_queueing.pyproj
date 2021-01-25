@@ -6,8 +6,7 @@
     <ProjectHome>.</ProjectHome>
     <StartupFile>
     </StartupFile>
-    <SearchPath>
-    </SearchPath>
+    <SearchPath>..\wp_configuration</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
     <Name>wp_queueing</Name>
@@ -37,13 +36,6 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include=".pylintrc" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\wp_configuration\wp_configuration.pyproj">
-      <Name>wp_configuration</Name>
-      <Project>{9cc23cdb-88c0-465e-9f78-11a70e2aff31}</Project>
-      <Private>True</Private>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in

@@ -5,8 +5,7 @@
     <ProjectGuid>6d01e086-6a0b-4330-bbf7-eff6c3aaa4f4</ProjectGuid>
     <ProjectHome>.</ProjectHome>
     <StartupFile>test_repository.py</StartupFile>
-    <SearchPath>
-    </SearchPath>
+    <SearchPath>..\wp_queueing;..\wp_repository</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
     <Name>tests</Name>
@@ -26,18 +25,6 @@
     <Compile Include="test_repository.py">
       <SubType>Code</SubType>
     </Compile>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\wp_queueing\wp_queueing.pyproj">
-      <Name>wp_queueing</Name>
-      <Project>{8bfb1a48-1120-409f-b748-2a895a779100}</Project>
-      <Private>True</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\wp_repository\wp_repository.pyproj">
-      <Name>wp_repository</Name>
-      <Project>{46eb14be-3093-4746-8c29-a929179664b5}</Project>
-      <Private>True</Private>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in

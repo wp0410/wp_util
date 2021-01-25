@@ -193,6 +193,8 @@ class TestTable1(rep_elem.RepositoryElement):
         }
         return json.dumps(res)
 
+import os
+
 class Test2Repository(unittest.TestCase):
     def setUp(self):
         super().setUp()
@@ -204,6 +206,7 @@ class Test2Repository(unittest.TestCase):
     def tearDown(self):
         super().tearDown()
         self._repository.close()
+        os.remove(self._db_path)
 
     def test_01_table1(self):
         t1 = TestTable1()
@@ -229,7 +232,7 @@ class Test2Repository(unittest.TestCase):
         self.assertTrue(num_rec == 1)
         t3 = self._repository.select_by_key(t1)
         self.assertTrue(t3 is not None)
-        self.assertTrue(isinstance(t3, TestTable1))
+        self.assertIsInstance(t3, TestTable1)
         self.assertEqual(t1.cls_elem_1, t3.cls_elem_1)
         self.assertEqual(t1.cls_elem_2, t3.cls_elem_2)
         self.assertEqual(t1.cls_elem_int, t3.cls_elem_int)
@@ -241,6 +244,44 @@ class Test2Repository(unittest.TestCase):
         self.assertTrue(num_rec == 1)
         t4 = self._repository.select_by_key(t1)
         self.assertTrue(t4 is None)
+
+        # test SELECT_ALL
+        num_rec = 0
+        for cnt in range(100):
+            t5 = TestTable1()
+            t5.random()
+            num_rec += self._repository.insert(t5)
+        self.assertEqual(num_rec, 100)
+        rec_list = self._repository.select_all()
+        self.assertEqual(len(rec_list), num_rec)
+        for rec in rec_list:
+            self.assertIsInstance(rec, TestTable1)
+            t6 = self._repository.select_by_key(rec)
+            self.assertIsInstance(t6, TestTable1)
+            self.assertEqual(t6.cls_elem_1, rec.cls_elem_1)
+            self.assertEqual(t6.cls_elem_2, rec.cls_elem_2)
+            self.assertEqual(t6.cls_elem_int, rec.cls_elem_int)
+            self.assertEqual(t6.cls_elem_dec, rec.cls_elem_dec)
+            self.assertEqual(t6.cls_elem_dtm, rec.cls_elem_dtm)
+            self._repository.delete(t6)
+        rec_list = self._repository.select_all()
+        self.assertEqual(len(rec_list), 0)
+
+    def test_02_With(self):
+        with repo3.SQLiteRepository(TestTable1, self._db_path) as repo:
+            num_rec = 0
+            for cnt in range(25):
+                t0 = TestTable1()
+                t0.random()
+                num_rec += repo.insert(t0)
+            self.assertEqual(num_rec, 25)
+            rec_list = repo.select_all()
+            self.assertEqual(num_rec, len(rec_list))
+            for rec in rec_list:
+                repo.delete(rec)
+            rec_list = repo.select_all()
+            self.assertEqual(0, len(rec_list))
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=5)
