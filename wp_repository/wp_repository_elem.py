@@ -230,6 +230,8 @@ class AttributeMap:
             Getter for the list of attributes that are part of the primary key of the underlying table.
 
     Methods:
+        __getitem__ : AttributeMapping
+            Accessor for the Attribute Mappings by class attribute name.
         _select_mappings : list
             Retrieves all attributes for which a specified bool property returns True.
     """
@@ -316,6 +318,22 @@ class AttributeMap:
         """
         return self._select_mappings('is_db_key')
 
+    def __getitem__(self, key_value) -> AttributeMapping:
+        """ Accessor for the Attribute Mappings by class attribute name.
+
+        Parameters:
+            key_value : str
+                Name of a class attribute.
+
+        Returns:
+            AttributeMapping
+                Attribute Mapping element with the matching class attribute name. None if not found.
+        """
+        for mapping in self._mappings:
+            if mapping.class_attr_name == key_value:
+                return mapping
+        return None
+
     def _select_mappings(self, bool_attr_name: str) -> list:
         """ Retrieves all attributes for which a specified bool property returns True.
 
@@ -363,6 +381,9 @@ class RepositoryElement:
         select_all_statement : SQLStatement
             Creates the SQL SELECT statement to retrieve all entries from the repository, sorted by
             their key attributes.
+        select_where_statement : SQLStatement
+            Creates the SQL SELECT statement to retrieve all entries from the repository that match the given
+            criteria, sorted by their key attributes.
         insert : int
             Inserts a RepositoryElement into the SQLite table by executing its SQL INSERT
             statement.
@@ -372,6 +393,17 @@ class RepositoryElement:
         delete : int
             Deletes a RepositoryElement from the SQLite table by executing its SQL DELETE
             statement.
+        _select_clause: SQLStatement
+            Creates the SELECT clause of the SQL SELECT statements from the Attribute Map.
+        _key_where_clause: SQLStatement
+            Creates the WHERE clause for the table attributes marked as part of the primary key
+            in the Attribute Map.
+        _where_clause_term : SQLStatement
+            Creates part of a where clause and its parameters from the tuple containing the comparison criterion
+            and appends it to the given SQL SELECT statement.
+        _key_order_clause: SQLStatement
+            Creates an ORDER BY clause for the table attributes marked as part of the primary key
+            in the Attribute Map.
         _type_conversion : Any, static
             Converts the type of the element read from the database to the target type of the corresponding
             class attribute.
@@ -486,15 +518,7 @@ class RepositoryElement:
                           primary key values.
         """
         sel_stmt = SQLStatement()
-        sel_stmt.stmt_text = 'SELECT '
-        att_no = 0
-        for mapping in self._attribute_map.attributes_for_select:
-            if att_no == 0:
-                sel_stmt.append_text(' {}'.format(mapping.db_attr_name))
-            else:
-                sel_stmt.append_text(', {}'.format(mapping.db_attr_name))
-            att_no += 1
-        sel_stmt.append_text(' FROM {} '.format(self._attribute_map.table_name))
+        self._select_clause(sel_stmt)
         return self._key_where_clause(sel_stmt)
 
     def select_all_statement(self) -> SQLStatement:
@@ -506,23 +530,91 @@ class RepositoryElement:
                 SQL SELECT statement to retrieve all entries sorted by their key attributes.
         """
         sel_stmt = SQLStatement()
-        sel_stmt.stmt_text = 'SELECT '
+        self._select_clause(sel_stmt)
+        return self._key_order_clause(sel_stmt)
+
+    def select_where_statement(self, where_criteria: list) -> SQLStatement:
+        """ Creates the SQL SELECT statement to retrieve all entries from the repository that match the given
+            criteria, sorted by their key attributes.
+
+        Parameters:
+            where_criteria : list
+                List containing the criteria for selecting the repository entries. Every criterion is a tuple
+                ('attribute_name', 'operator', 'value').
+
+        Returns:
+            SQLStatement:
+                SQL SELECT statement to retrieve all matching repository elements.
+        """
+        sel_stmt = SQLStatement()
+        sel_stmt.stmt_params = []
+        self._select_clause(sel_stmt)
+        att_no = 0
+        for where_term in where_criteria:
+            if att_no == 0:
+                sel_stmt.append_text(' WHERE ')
+            else:
+                sel_stmt.append_text( ' AND ')
+            att_no += 1
+            self._where_clause_term(sel_stmt, where_term)
+        return self._key_order_clause(sel_stmt)
+
+    def _select_clause(self, sql_stmt: SQLStatement) -> SQLStatement:
+        """ Creates the SELECT clause of the SQL SELECT statements from the Attribute Map.
+
+        Parameters:
+            sql_stmt: SQLStatement
+                Statement to create the SELECT clause in.
+
+        Returns:
+            SQLStatement
+                Statement containing the SELECT clause.
+        """
+        sql_stmt.stmt_text = 'SELECT '
         att_no = 0
         for mapping in self._attribute_map.attributes_for_select:
             if att_no == 0:
-                sel_stmt.append_text(' {}'.format(mapping.db_attr_name))
+                sql_stmt.append_text(' {}'.format(mapping.db_attr_name))
             else:
-                sel_stmt.append_text(', {}'.format(mapping.db_attr_name))
+                sql_stmt.append_text(', {}'.format(mapping.db_attr_name))
             att_no += 1
-        sel_stmt.append_text(' FROM {} ORDER BY '.format(self._attribute_map.table_name))
-        att_no = 0
-        for mapping in self._attribute_map.db_key_attributes:
-            if att_no == 0:
-                sel_stmt.append_text(mapping.db_attr_name)
-            else:
-                sel_stmt.append_text(', {}'.format(mapping.db_attr_name))
-            att_no += 1
-        return sel_stmt
+        sql_stmt.append_text(' FROM {} '.format(self._attribute_map.table_name))
+        return sql_stmt
+
+    def _where_clause_term(self, sql_stmt: SQLStatement, where_term: tuple) -> SQLStatement:
+        """ Creates part of a where clause and its parameters from the tuple containing the comparison criterion
+            and appends it to the given SQL SELECT statement.
+
+        Parameters:
+            sql_stmt : SQLStatement
+                Statement to create the SELECT clause in.
+            where_term : tuple
+                Tuple containing the comparison criterion. It has to be a tuple
+                (class_attribute_name, operator, value), where:
+                    class_attribute_name : str
+                        Name of the attribute of the contents class. Must be contained in the Attribute Map of
+                        the contents class.
+                    operator : str
+                        Comparison operator to be applied to the class attribute. Legal values are:
+                            "=", "!=", ">", "<", ">=", "<=", "LIKE", "BETWEEN".
+                    value : str
+                        Value to compare the class attribute to. In case of operator is "BETWEEN", value must
+                        be a list containing exactly 2 elements.
+        Returns:
+            SQLStatement
+                Statement containing the created WHERE clause part.
+        """
+        cond_att, cond_op, cond_val = where_term
+        mapping = self._attribute_map[cond_att]
+        if mapping is None:
+            raise ValueError('Invalid class attribute name: "{}"'.format(cond_att))
+        if cond_op.upper() not in ["=", "!=", ">", "<", "=>", "<=", "LIKE", "BETWEEN"]:
+            raise ValueError('Invalid where clause operator: "{}"'.format(cond_op))
+        sql_stmt.append_text(' {} {} ? '.format(mapping.db_attr_name, cond_op))
+        if cond_op.upper() == "BETWEEN":
+            sql_stmt.append_text('AND ? ')
+        sql_stmt.append_param(cond_val)
+        return sql_stmt
 
     def _key_where_clause(self, sql_stmt: SQLStatement) -> SQLStatement:
         """ Creates a WHERE clause for the table attributes marked as part of the primary key in the
@@ -546,6 +638,27 @@ class RepositoryElement:
             att_no += 1
         return sql_stmt
 
+    def _key_order_clause(self, sql_stmt: SQLStatement) -> SQLStatement:
+        """ Creates an ORDER BY clause for the table attributes marked as part of the primary key
+            in the Attribute Map.
+
+        Parameters:
+            sql_stmt : SQLStatement
+                SQL statement to append the ORDER BY clause to.
+
+        Returns:
+            SQLStatement : Given SQL statement with ORDER BY clause.
+        """
+        sql_stmt.append_text(' ORDER BY ')
+        att_no = 0
+        for mapping in self._attribute_map.db_key_attributes:
+            if att_no == 0:
+                sql_stmt.append_text(mapping.db_attr_name)
+            else:
+                sql_stmt.append_text(', {}'.format(mapping.db_attr_name))
+            att_no += 1
+        return sql_stmt
+
     def insert(self, cursor: sqlite3.Cursor) -> int:
         """ Inserts a RepositoryElement into the SQLite table by executing its SQL INSERT
             statement.
@@ -560,11 +673,12 @@ class RepositoryElement:
         """
         sql_insert_stmt = self.insert_statement()
         cursor.execute(sql_insert_stmt.stmt_text, sql_insert_stmt.stmt_params)
+        num_rows = cursor.rowcount
         if self._attribute_map.has_auto_increment_key:
             auto_key = cursor.lastrowid
             setattr(self, self._attribute_map.autoincrement_attribute.class_attr_name, auto_key)
             return auto_key
-        return 1
+        return num_rows
 
     def update(self, cursor: sqlite3.Cursor) -> int:
         """ Updates a RepositoryElement in the SQLite table by executing its SQL UPDATE statement.

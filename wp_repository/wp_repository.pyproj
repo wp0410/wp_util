@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>46eb14be-3093-4746-8c29-a929179664b5</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>wp_repository_elem.py</StartupFile>
+    <StartupFile>__init__.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>

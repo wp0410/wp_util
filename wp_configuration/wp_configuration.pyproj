@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>9cc23cdb-88c0-465e-9f78-11a70e2aff31</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>wp_configuration.py</StartupFile>
+    <StartupFile>__init__.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>

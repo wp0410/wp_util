@@ -108,6 +108,21 @@ class Test1RepositoryObject(unittest.TestCase):
         self.assertEqual(ref_stmt.lower().strip().replace(' ',''), sel_stmt.stmt_text.lower().strip().replace(' ',''))
         self.assertEqual(ref_stmt_params, sel_stmt.stmt_params)
 
+    def test_03(self):
+        """ Test SELECT ALL and SELECT WHERE statement construction. """
+        telem = TestPerson()
+        # Test select_all
+        ref_stmt = 'SELECT test_name, test_age, test_wght, test_ec FROM test_person ORDER BY test_name'
+        ref_stmt_params = []
+        sel_stmt = telem.select_all_statement()
+        self.assertEqual(ref_stmt.lower().strip().replace(' ',''), sel_stmt.stmt_text.lower().strip().replace(' ',''))
+        self.assertEqual(ref_stmt_params, sel_stmt.stmt_params)
+        # Test select_where()
+        ref_stmt = 'SELECT test_name, test_age, test_wght, test_ec FROM test_person WHERE test_name = ? and test_age > ? ORDER BY test_name'
+        ref_stmt_params = [telem.name, telem.age]
+        sel_stmt = telem.select_where_statement([('name', '=', telem.name),('age', '>', telem.age)])
+        self.assertEqual(ref_stmt.lower().strip().replace(' ',''), sel_stmt.stmt_text.lower().strip().replace(' ',''))
+        self.assertEqual(ref_stmt_params, sel_stmt.stmt_params)
 
 def create_test_db(db_path: str):
     db_conn = sqlite3.connect(db_path)
@@ -208,7 +223,7 @@ class Test2Repository(unittest.TestCase):
         self._repository.close()
         os.remove(self._db_path)
 
-    def test_01_table1(self):
+    def te_st_01_table1(self):
         t1 = TestTable1()
         t1.random()
         
@@ -267,7 +282,7 @@ class Test2Repository(unittest.TestCase):
         rec_list = self._repository.select_all()
         self.assertEqual(len(rec_list), 0)
 
-    def test_02_With(self):
+    def te_st_02_With(self):
         with repo3.SQLiteRepository(TestTable1, self._db_path) as repo:
             num_rec = 0
             for cnt in range(25):
@@ -277,6 +292,41 @@ class Test2Repository(unittest.TestCase):
             self.assertEqual(num_rec, 25)
             rec_list = repo.select_all()
             self.assertEqual(num_rec, len(rec_list))
+            for rec in rec_list:
+                repo.delete(rec)
+            rec_list = repo.select_all()
+            self.assertEqual(0, len(rec_list))
+
+    def test_03_select_where(self):
+        with repo3.SQLiteRepository(TestTable1, self._db_path) as repo:
+            num_total = 0
+            num_lt_5000 = 0
+            num_1000_3000 = 0
+            num_das = 0
+            num_ins = 100
+            for cnt in range(num_ins):
+                t0 = TestTable1()
+                t0.random()
+                res = repo.insert(t0)
+                num_total += res
+                if t0.cls_elem_int < 5000:
+                    num_lt_5000 += res
+                if t0.cls_elem_int >= 1000 and t0.cls_elem_int <= 3000:
+                    num_1000_3000 += res
+                if t0.cls_elem_txt.startswith("das"):
+                    num_das += res
+            self.assertEqual(num_total, num_ins)
+            rec_list1 = repo.select_where([('cls_elem_int', '<', 5000)])
+            self.assertIsNotNone(rec_list1)
+            self.assertEqual(num_lt_5000, len(rec_list1))
+            rec_list1 = repo.select_where([('cls_elem_int', 'between', [1000, 3000])])
+            self.assertIsNotNone(rec_list1)
+            self.assertEqual(num_1000_3000, len(rec_list1))
+            rec_list2 = repo.select_where([('cls_elem_txt', 'like', 'das%')]) 
+            self.assertIsNotNone(rec_list2)
+            self.assertEqual(num_das, len(rec_list2))
+            rec_list = repo.select_all()
+            self.assertEqual(num_total, len(rec_list))
             for rec in rec_list:
                 repo.delete(rec)
             rec_list = repo.select_all()
