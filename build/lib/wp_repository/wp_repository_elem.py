@@ -649,7 +649,7 @@ class RepositoryElement:
         Returns:
             SQLStatement : Given SQL statement with ORDER BY clause.
         """
-        sql_stmt.append_text(' FROM {} ORDER BY '.format(self._attribute_map.table_name))
+        sql_stmt.append_text(' ORDER BY ')
         att_no = 0
         for mapping in self._attribute_map.db_key_attributes:
             if att_no == 0:
@@ -673,11 +673,12 @@ class RepositoryElement:
         """
         sql_insert_stmt = self.insert_statement()
         cursor.execute(sql_insert_stmt.stmt_text, sql_insert_stmt.stmt_params)
+        num_rows = cursor.rowcount
         if self._attribute_map.has_auto_increment_key:
             auto_key = cursor.lastrowid
             setattr(self, self._attribute_map.autoincrement_attribute.class_attr_name, auto_key)
             return auto_key
-        return 1
+        return num_rows
 
     def update(self, cursor: sqlite3.Cursor) -> int:
         """ Updates a RepositoryElement in the SQLite table by executing its SQL UPDATE statement.

@@ -608,11 +608,15 @@ class RepositoryElement:
         mapping = self._attribute_map[cond_att]
         if mapping is None:
             raise ValueError('Invalid class attribute name: "{}"'.format(cond_att))
-        if cond_op.upper() not in ["=", "!=", ">", "<", "=>", "<=", "LIKE", "BETWEEN"]:
+        if cond_op.upper() not in ["=", "!=", ">", "<", "=>", "<=", "LIKE", "BETWEEN", "IN"]:
             raise ValueError('Invalid where clause operator: "{}"'.format(cond_op))
-        sql_stmt.append_text(' {} {} ? '.format(mapping.db_attr_name, cond_op))
+        sql_stmt.append_text(' {} {} '.format(mapping.db_attr_name, cond_op))
         if cond_op.upper() == "BETWEEN":
-            sql_stmt.append_text('AND ? ')
+            sql_stmt.append_text('? AND ? ')
+        elif cond_op.upper() == "IN":
+            sql_stmt.append_text(f"( {','.join(['?']*len(cond_val))} )")
+        else:
+            sql_stmt.append_text(' ? ')
         sql_stmt.append_param(cond_val)
         return sql_stmt
 

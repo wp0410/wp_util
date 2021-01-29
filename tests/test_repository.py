@@ -174,11 +174,11 @@ class TestTable1(rep_elem.RepositoryElement):
         self.cls_elem_dec = 0.0
         self.cls_elem_dtm = None
 
-    def random(self):
+    def random(self, max_int: int = 10000):
         self.cls_elem_1 = self._rnd.randint(1, 10000)
         self.cls_elem_2 = self._randtxt()
         self.cls_elem_txt = self._randtxt()
-        self.cls_elem_int = self._rnd.randint(1, 10000)
+        self.cls_elem_int = self._rnd.randint(1, max_int)
         self.cls_elem_dec = self._rnd.randint(1, 1000000000) / self._rnd.randint(100, 10000)
         self.cls_elem_dtm = datetime.now() - timedelta(self._rnd.randint(0, 60), self._rnd.randint(1, 86400))
 
@@ -331,6 +331,24 @@ class Test2Repository(unittest.TestCase):
                 repo.delete(rec)
             rec_list = repo.select_all()
             self.assertEqual(0, len(rec_list))
+
+    def test_04_select_in(self):
+        with repo3.SQLiteRepository(TestTable1, self._db_path) as repo:
+            num_rec = 0
+            num_ins = 100
+            num_per_val = [0, 0, 0, 0, 0, 0]
+            for cnt in range(num_ins):
+                t0 = TestTable1()
+                t0.random(max_int = len(num_per_val) - 1)
+
+                num_per_val[t0.cls_elem_int] += 1
+                num_rec += repo.insert(t0)
+            self.assertEqual(num_rec, num_ins)
+            print(t0.select_where_statement([("cls_elem_int", "in", [1, 2, 3])]).stmt_text)
+            print(t0.select_where_statement([("cls_elem_int", "in", [1, 2, 3])]).stmt_params)
+            rec_list1 = repo.select_where([("cls_elem_int", "in", [1, 2, 3])])
+            self.assertIsNotNone(rec_list1)
+            self.assertEqual(len(rec_list1), num_per_val[1] + num_per_val[2] + num_per_val[3])
 
 
 if __name__ == '__main__':
