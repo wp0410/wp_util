@@ -341,3 +341,4 @@ healthchecksdb
 /build/lib/wp_queueing
 /dist
 /wp_util.egg-info
+/_archive/wp_configuration

@@ -15,9 +15,10 @@
 import unittest
 import uuid
 from datetime import datetime
-import wp_queueing as wpq
+import wp_queueing_base as wpqb
+import wp_queueing_message as wpqm
 
-class TMessageOK(wpq.IConvertToDict):
+class TMessageOK(wpqm.IConvertToDict):
     def __init__(self):
         super().__init__()
 
@@ -41,7 +42,7 @@ class Test1QueueMessage(unittest.TestCase):
 
     def test_01(self):
         print("")
-        msg_1 = wpq.QueueMessage(msg_topic = "a_topic")
+        msg_1 = wpqm.QueueMessage(msg_topic = "a_topic")
         self.assertIsNotNone(msg_1)
         print(str(msg_1))
         self.assertTrue(type(msg_1.msg_id) is str and len(msg_1.msg_id) == len(str(uuid.uuid4())))
@@ -53,7 +54,7 @@ class Test1QueueMessage(unittest.TestCase):
         except:
             self.assertTrue(False, "Invalid datetime format")
         self.assertTrue(type(msg_1.msg_payload) is dict and len(msg_1.msg_payload) == 0)
-        with self.assertRaises(wpq.QueueingException):
+        with self.assertRaises(wpqb.QueueingException):
             msg_1.msg_payload = TMessageFail()
         try:
             msg_1.msg_payload = TMessageOK()
@@ -61,7 +62,7 @@ class Test1QueueMessage(unittest.TestCase):
             self.assertTrue(False, 'Invalid Payload Type')
         self.assertIsNotNone(msg_1.msg_payload)
         self.assertTrue(type(msg_1.msg_payload) is dict and 'class' in msg_1.msg_payload)
-        msg_2 = wpq.QueueMessage()
+        msg_2 = wpqm.QueueMessage()
         self.assertIsNotNone(msg_2)
         temp_mqtt = msg_1.mqtt_message
         self.assertEqual(temp_mqtt['topic'], msg_1.msg_topic)
