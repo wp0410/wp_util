@@ -13,7 +13,7 @@
     and limitations under the LICENSE.
 """
 import sqlite3
-from wp_repository_elem import RepositoryElement
+from .wp_repository_elem import RepositoryElement
 
 class SQLiteRepository:
     """ The repository class following the "Repository" design pattern. Maps Python objects onto a
