@@ -15,7 +15,7 @@
 import sqlite3
 from datetime import datetime
 from typing import Any
-from .wp_sql_statement import SQLStatement
+from wp_sql_statement import SQLStatement
 
 class AttributeMapping:
     """ Definition of the mapping between a column in a database table and an attribute of

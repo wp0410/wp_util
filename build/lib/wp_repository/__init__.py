@@ -12,8 +12,13 @@
     either express or implied. See the LICENSE for the specific language governing permissions
     and limitations under the LICENSE.
 """
-from .wp_repository_sl3 import SQLiteRepository
-from .wp_sql_statement import SQLStatement
-from .wp_repository_elem import AttributeMapping
-from .wp_repository_elem import AttributeMap
-from .wp_repository_elem import RepositoryElement
+# pylint: disable=wrong-import-position
+
+import sys
+sys.path.append(__file__[:__file__.rfind('\\') - len(__file__)])
+
+from wp_repository_sl3 import SQLiteRepository
+from wp_sql_statement import SQLStatement
+from wp_repository_elem import AttributeMapping
+from wp_repository_elem import AttributeMap
+from wp_repository_elem import RepositoryElement

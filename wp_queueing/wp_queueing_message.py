@@ -15,7 +15,7 @@
 import uuid
 import json
 from datetime import datetime
-import wp_queueing_base
+import wp_queueing.wp_queueing_base as wp_queueing_base
 
 
 class IConvertToDict:
@@ -126,7 +126,7 @@ class QueueMessage:
             payload : dict or IConvertToDict
                 Payload of the message object.
         """
-        if payload is type(dict):
+        if isinstance(payload, type(dict)):
             self._payload = payload
         elif issubclass(type(payload), IConvertToDict):
             self._payload = payload.to_dict()
@@ -161,13 +161,9 @@ class QueueMessage:
         self._payload = temp_obj['payload']
 
     @property
-    def mqtt_message(self) -> dict:
+    def mqtt_message(self) -> str:
         """ Getter that creates a well-formatted MQTT message out of the message object. """
-        return {
-            'topic': self._msg_topic,
-            'payload': self.json_serialize_payload(),
-            'qos': 0
-        }
+        return self.json_serialize_payload()
 
     @mqtt_message.setter
     def mqtt_message(self, message) -> None:

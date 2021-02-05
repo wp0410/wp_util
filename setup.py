@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh_readme:
 
 setuptools.setup(
     name = "wp_util",
-    version = "0.0.dev14",
+    version = "0.0.dev15",
     author = "Walter Pachlinger",
     author_email = "walter.pachlinger@gmail.com",
     description = "A collection of useful utilities",
