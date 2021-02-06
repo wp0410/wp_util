@@ -15,7 +15,7 @@
 import uuid
 import json
 from datetime import datetime
-import wp_queueing.wp_queueing_base as wp_queueing_base
+import wp_queueing_base
 
 
 class IConvertToDict:

@@ -15,8 +15,8 @@
 import inspect
 import logging
 import paho.mqtt.client as mqtt
-import wp_queueing.wp_queueing_base as wp_queueing_base
-import wp_queueing.wp_queueing_message as wp_queueing_message
+import wp_queueing_base
+import wp_queueing_message
 
 
 def mqtt_on_connect(client, userdata, flags, rc):
