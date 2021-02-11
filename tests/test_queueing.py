@@ -15,8 +15,39 @@
 import unittest
 import uuid
 from datetime import datetime
+import time
+import logging
+import logging.config
 import wp_queueing_base as wpqb
 import wp_queueing_message as wpqm
+import wp_queueing_client as wpqc
+
+LOGGER_CONFIG = {
+        "version": 1,
+        "formatters": {
+            "default": {
+                "format": "%(asctime)s-%(name)s-%(levelname)s-%(message)s",
+                "datefmt": "%Y-%m-%d %H:%M:%S"
+            }
+        },
+        "handlers": {
+            "console": {
+                "class": "logging.StreamHandler",
+                "level": "DEBUG",
+                "formatter": "default",
+                "stream": "ext://sys.stdout"
+            }
+        },
+        "loggers": {
+            "Test": {
+                "level": "DEBUG",
+                "handlers": [
+                    "console"
+                ],
+                "propagate": "no"
+            }
+        }
+    }
 
 class TMessageOK(wpqm.IConvertToDict):
     def __init__(self):
@@ -31,14 +62,21 @@ class TMessageFail:
     def __init__(self):
         self.t = 1
 
-class Test1QueueMessage(unittest.TestCase):
-    def __init_config(self):
-        self.__config = {
-            "host": "localhost"
+class TestMsg(wpqm.IConvertToDict):
+    def to_dict(self) -> dict:
+        return {
+            'device_id': 'dev.001',
+            'probe_tm': '2021-02-10 15:00:00.1',
+            'channel': 1,
+            'value': 25938,
+            'voltage': 2.9823121
         }
 
+class Test1QueueMessage(unittest.TestCase):
     def setUp(self):
         super().setUp()
+        logging.config.dictConfig(LOGGER_CONFIG)
+        self._logger = logging.getLogger('Test')
 
     def test_01(self):
         print("")
@@ -65,14 +103,33 @@ class Test1QueueMessage(unittest.TestCase):
         msg_2 = wpqm.QueueMessage()
         self.assertIsNotNone(msg_2)
         temp_mqtt = msg_1.mqtt_message
-        self.assertEqual(temp_mqtt['topic'], msg_1.msg_topic)
-        msg_2.mqtt_message = temp_mqtt
+        msg_2.mqtt_message = {'topic': msg_1.msg_topic, 'payload': temp_mqtt}
         self.assertEqual(msg_1.msg_id, msg_2.msg_id)
         self.assertEqual(msg_1.msg_timestamp, msg_2.msg_timestamp)
         self.assertEqual(msg_1.msg_topic, msg_2.msg_topic)
         self.assertIsNotNone(msg_2.msg_payload)
         self.assertTrue(type(msg_2.msg_payload) is dict and 'class' in msg_2.msg_payload)
         self.assertEqual(msg_1.msg_payload['class'], msg_2.msg_payload['class'])
+
+    def test_02_producer(self):
+        producer = wpqc.MQTTProducer('192.168.1.250', self._logger, 1883)
+        self.assertIsNotNone(producer)
+        test_msg = wpqm.QueueMessage("test/1")
+        test_msg.msg_payload = TestMsg()
+        producer.publish_single(test_msg)
+
+    def test_03_consumer(self):
+        consumer = wpqc.MQTTConsumer('192.168.1.250', self._logger, 1883)
+        self.assertIsNotNone(consumer)
+        consumer.topics = "test/#"
+        consumer.owner = self
+        for i in range(30):
+            time.sleep(1)
+            consumer.receive()
+
+    def message(self, msg):
+        self._logger.debug(str(msg))
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=5)

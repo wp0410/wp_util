@@ -342,3 +342,5 @@ healthchecksdb
 /dist
 /wp_util.egg-info
 /_archive/wp_configuration
+/build/lib/wp_repository/wp_repository_gen.py
+/wp_repository/wp_repository_gen.py

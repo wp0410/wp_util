@@ -87,16 +87,8 @@ class QueueMessage:
         self._payload = dict()
 
     def __str__(self) -> str:
-        """ Converts the object into a string.
-
-        Returns:
-            str : textual representation of the object.
-        """
-        temp_dict = {
-            'topic': self._msg_topic,
-            'payload': self.json_serialize_payload()
-        }
-        return str(temp_dict)
+        """ Converts the object into a string. """
+        return json.dumps({'topic': self._msg_topic,'payload': self.json_serialize_payload()})
 
     @property
     def msg_id(self) -> str:
@@ -126,7 +118,7 @@ class QueueMessage:
             payload : dict or IConvertToDict
                 Payload of the message object.
         """
-        if isinstance(payload, type(dict)):
+        if isinstance(payload, dict):
             self._payload = payload
         elif issubclass(type(payload), IConvertToDict):
             self._payload = payload.to_dict()

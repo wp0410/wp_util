@@ -305,8 +305,8 @@ class MQTTConsumer(MQTTClient):
 
     @topics.setter
     def topics(self, topic_list: list) -> None:
-        """ Setter for the "topics" attribute. This setter must be used at most once, and only if the "topics"
-            parameter of the Constructor has been empty (None). Otherwise, a RuntimeError will be raised.
+        """ Setter for the "topics" attribute. This setter must be used at most once,
+            else a RuntimeError will be raised.
 
         Parameters:
             topic_list : list
@@ -316,7 +316,12 @@ class MQTTConsumer(MQTTClient):
             return
         if self._is_subscribed:
             raise RuntimeError('MQTTConsumer is already subscribed')
-        self._subscribed_topics = topic_list
+        self._subscribed_topics = []
+        for topic in topic_list:
+            if isinstance(topic, tuple):
+                self._subscribed_topics.append(topic)
+            else:
+                self._subscribed_topics.append((topic, 0))
         self.mqtt_client.subscribe(topic_list)
         self.receive()
 
