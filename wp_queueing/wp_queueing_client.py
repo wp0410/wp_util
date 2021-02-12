@@ -322,7 +322,7 @@ class MQTTConsumer(MQTTClient):
                 self._subscribed_topics.append(topic)
             else:
                 self._subscribed_topics.append((topic, 0))
-        self.mqtt_client.subscribe(topic_list)
+        self.mqtt_client.subscribe(self._subscribed_topics)
         self.receive()
 
     def subscribe_ack(self, mid: int, granted_qos: int) -> None:

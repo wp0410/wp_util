@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh_readme:
 
 setuptools.setup(
     name = "wp_util",
-    version = "0.0.dev19",
+    version = "0.1.dev0",
     author = "Walter Pachlinger",
     author_email = "walter.pachlinger@gmail.com",
     description = "Basic PYTHON modules used in other projects",
@@ -15,7 +15,7 @@ setuptools.setup(
     packages = setuptools.find_packages(),
     classifiers = [
         "Programming Language :: Python :: 3",
-        "Development Status :: 2 - Pre-Alpha",
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: European Union Public Licence 1.2 (EUPL 1.2)",
         "Operating System :: OS Independent"
