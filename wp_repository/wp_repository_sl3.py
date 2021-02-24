@@ -14,6 +14,7 @@
 """
 import sqlite3
 from wp_repository_elem import RepositoryElement
+from wp_sql_statement import SQLStatement
 
 class SQLiteRepository:
     """ The repository class following the "Repository" design pattern. Maps Python objects onto a
@@ -56,6 +57,8 @@ class SQLiteRepository:
         select_where : list
             Retrieves all entries from the repository matching the given criteria, sorted by their key
             attributes.
+        query : list
+            Executes any SQL SELECT statement passed as parameters and returns the selected list of records.
     """
     def __init__(self, contents_type: type, sqlite_file_path: str = None, sql_connection: sqlite3.Connection = None):
         """ Constructor.
@@ -258,6 +261,32 @@ class SQLiteRepository:
         select_stmt = self._contents_type().select_where_statement(where_criteria)
         cursor = self._sql_connection.cursor()
         cursor.execute(select_stmt.stmt_text, select_stmt.stmt_params)
+        qry_result = cursor.fetchall()
+        cursor.close()
+        if do_commit:
+            self._sql_connection.commit()
+        for cursor_row in qry_result:
+            res_entry = self._contents_type()
+            res_entry.load_row(cursor_row)
+            res.append(res_entry)
+        return res
+
+    def query(self, query: SQLStatement, do_commit: bool = True) -> list:
+        """ Executes any SQL SELECT statement passed as parameters and returns the selected list of records.
+
+        Parameters:
+            query : SQLStatement
+                SQL SELECT statement to be executed.
+            do_commit : bool, optional
+                Indicates whether or not the select transaction shall be committed.
+                Default value is "True".
+
+        Returns:
+            list: List of retrieved entries (instances of contents type).
+        """
+        res = []
+        cursor = self._sql_connection.cursor()
+        cursor.execute(query.stmt_text, query.stmt_params)
         qry_result = cursor.fetchall()
         cursor.close()
         if do_commit:

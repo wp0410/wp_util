@@ -11,4 +11,8 @@ A PYTHON implementation of the "repository" pattern.
 ## wp_queueing
 
 A collection of useful classes to implement MQTT clients. Wrappers for serializable messages and
-simple MQTT clients (subscribers and publishers)
+simple MQTT clients (subscribers and publishers).
+
+## wp_configfile
+
+Wrapper for a json configuration file.
